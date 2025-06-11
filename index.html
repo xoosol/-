@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>커스텀 타이머 종소리</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      text-align: center;
+      padding: 5vh 10vw;
+      background-color: #f7f7f7;
+    }
+
+    h1 {
+      font-size: 6vw;
+      margin-bottom: 20px;
+    }
+
+    label, input, button, #status {
+      font-size: 4vw;
+      margin: 10px 0;
+    }
+
+    #timerDisplay {
+      font-size: 6vw;
+      font-weight: bold;
+      margin-top: 10px;
+    }
+
+    input[type="number"] {
+      width: 80px;
+      padding: 5px;
+    }
+
+    input[type="range"] {
+      width: 80%;
+      max-width: 300px;
+    }
+
+    button {
+      padding: 15px 30px;
+      margin: 10px;
+      border: none;
+      border-radius: 8px;
+      background-color: #007bff;
+      color: white;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background-color: #0056b3;
+    }
+
+    @media (min-width: 768px) {
+      h1 { font-size: 32px; }
+      label, input, button, #status { font-size: 18px; }
+      #timerDisplay { font-size: 28px; }
+    }
+  </style>
+</head>
+<body>
+  <h1>타이머 종소리 (커스텀)</h1>
+
+  <div>
+    <label>1단계 (X분 후): <input type="number" id="firstTime" value="1" min="0.1" step="0.1"> 분</label><br>
+    <label>2단계 (X분 후): <input type="number" id="secondTime" value="3" min="0.1" step="0.1"> 분</label><br>
+  </div>
+
+  <div>
+    <label>🔊 볼륨: <input type="range" id="volumeControl" min="0" max="1" step="0.01" value="1"></label>
+  </div>
+
+  <button onclick="startTimer()">시작</button>
+  <button onclick="stopTimer()">정지</button>
+
+  <p id="status">대기 중...</p>
+  <p id="timerDisplay"></p>
+
+  <audio id="bell" src="boxing-bell.mp3"></audio>
+
+  <script>
+    let timer1 = null;
+    let timer2 = null;
+    let running = false;
+    let startTime = null;
+    let countdownInterval = null;
+
+    const bell = document.getElementById("bell");
+    const statusText = document.getElementById("status");
+    const displayText = document.getElementById("timerDisplay");
+
+    function playSound() {
+      bell.currentTime = 0;
+      bell.play();
+    }
+
+    function updateVolume() {
+      const volume = document.getElementById("volumeControl").value;
+      bell.volume = volume;
+    }
+
+    document.getElementById("volumeControl").addEventListener("input", updateVolume);
+
+    function startTimer() {
+      if (running) return;
+
+      playSound(); // 시작할 때 소리 재생
+
+      const first = parseFloat(document.getElementById("firstTime").value) * 60 * 1000;
+      const second = parseFloat(document.getElementById("secondTime").value) * 60 * 1000;
+
+      if (isNaN(first) || isNaN(second) || first <= 0 || second <= 0) {
+        alert("시간을 올바르게 입력해주세요.");
+        return;
+      }
+
+      running = true;
+      statusText.textContent = "타이머 작동 중...";
+      updateVolume();
+
+      const loop = () => {
+        if (!running) return;
+
+        startTime = Date.now();
+        updateCountdown(first);
+
+        timer1 = setTimeout(() => {
+          playSound();
+
+          if (!running) return;
+          updateCountdown(second);
+
+          timer2 = setTimeout(() => {
+            playSound();
+            loop(); // 반복
+          }, second);
+
+        }, first);
+      };
+
+      loop();
+    }
+
+    function stopTimer() {
+      running = false;
+      clearTimeout(timer1);
+      clearTimeout(timer2);
+      clearInterval(countdownInterval);
+      statusText.textContent = "정지됨";
+      displayText.textContent = "";
+    }
+
+    function updateCountdown(duration) {
+      clearInterval(countdownInterval);
+      const endTime = Date.now() + duration;
+
+      countdownInterval = setInterval(() => {
+        const remaining = endTime - Date.now();
+        if (remaining <= 0) {
+          displayText.textContent = "";
+          clearInterval(countdownInterval);
+        } else {
+          const min = Math.floor(remaining / 60000);
+          const sec = Math.floor((remaining % 60000) / 1000);
+          displayText.textContent = `남은 시간: ${min}분 ${sec < 10 ? '0' + sec : sec}초`;
+        }
+      }, 500);
+    }
+  </script>
+</body>
+</html>
+
